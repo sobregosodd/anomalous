@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "anomalous"
+version = "0.1.0"
+description = "Runtime behavioural anomaly detection for GitHub Actions pipelines."
+authors = ["Sebastian Obregoso", "Lorenzo Susini"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [{ include = "anomalous", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+typer = "^0.12"
+numpy = "^2.0"
+scikit-learn = "^1.5"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+ruff = "^0.6"
+mypy = "^1.11"
+
+[tool.poetry.scripts]
+anomalous = "anomalous.cli:app"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["anomalous"]
+ignore_missing_imports = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
