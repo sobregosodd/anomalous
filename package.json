@@ -1,0 +1,15 @@
+{
+  "name": "anomalous-action",
+  "version": "0.1.0",
+  "description": "Collection action for Anomalous — starts and collects a runtime activity dump for a GitHub Actions job.",
+  "license": "Apache-2.0",
+  "author": "Sebastian Obregoso",
+  "contributors": [
+    "Lorenzo Susini"
+  ],
+  "private": true,
+  "scripts": {
+    "check": "node --check js/main.js && node --check js/post.js && node --check js/state.js"
+  },
+  "//": "Intentionally dependency-free for now. If @actions/core, @actions/exec, @actions/artifact are adopted, add them here and bundle js/ into dist/ with @vercel/ncc."
+}

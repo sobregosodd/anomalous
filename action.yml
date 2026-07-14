@@ -1,0 +1,34 @@
+# Anomalous — collection action (native Node action).
+#
+# Node is used here (not a composite action) specifically for the main/post
+# lifecycle: `post` runs at the end of the job even if a user step failed, which
+# is what guarantees the activity dump is always collected. Composite actions do
+# not support post steps.
+name: "Anomalous — collect"
+description: "Start a host-wide runtime activity dump for the job and collect it at the end."
+author: "Sebastian Obregoso, Lorenzo Susini"
+branding:
+  icon: "activity"
+  color: "purple"
+
+inputs:
+  dump-name:
+    description: "Name for the collected activity dump / artifact."
+    required: false
+    default: "anomalous-dump"
+  upload-artifact:
+    description: "Whether to upload the collected dump as a build artifact."
+    required: false
+    default: "true"
+  agent-version:
+    description: "Datadog Agent version to install for collection (empty = latest)."
+    required: false
+    default: ""
+
+# Dependency-free JS, so these files can be referenced directly (no bundler).
+# If the @actions/* toolkit is adopted later, bundle with `ncc` into dist/ and
+# repoint main/post to dist/*.js.
+runs:
+  using: "node20"
+  main: "js/main.js"
+  post: "js/post.js"
