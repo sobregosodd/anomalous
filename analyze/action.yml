@@ -1,0 +1,39 @@
+# Anomalous — analyze action (composite).
+#
+# This action has no post-hook needs (it just runs the Python analyzer), so a
+# composite action is appropriate here. It sets up Python, installs the package,
+# and scores a run's dump against a trained model.
+name: "Anomalous — analyze"
+description: "Score a collected activity dump against the trained behavioural model."
+author: "Sebastian Obregoso, Lorenzo Susini"
+
+inputs:
+  dump:
+    description: "Path to the activity dump to analyze."
+    required: true
+  model:
+    description: "Path to the trained model."
+    required: false
+    default: "anomalous-model.joblib"
+  python-version:
+    description: "Python version to set up."
+    required: false
+    default: "3.11"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install anomalous
+      shell: bash
+      # TODO(packaging): pin to a published version/wheel instead of installing
+      # from the action checkout once the package is released.
+      run: pip install "${{ github.action_path }}/.."
+
+    - name: Analyze run
+      shell: bash
+      run: anomalous analyze "${{ inputs.dump }}" --model "${{ inputs.model }}"
