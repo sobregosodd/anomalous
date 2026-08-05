@@ -25,10 +25,9 @@ inputs:
     required: false
     default: ""
 
-# Dependency-free JS, so these files can be referenced directly (no bundler).
-# If the @actions/* toolkit is adopted later, bundle with `ncc` into dist/ and
-# repoint main/post to dist/*.js.
+# TypeScript action: source lives under src/, built with @vercel/ncc into the
+# committed dist/ below. `npm run build` regenerates dist/ after editing src/.
 runs:
   using: "node20"
-  main: "js/main.js"
-  post: "js/post.js"
+  main: "dist/main/index.js"
+  post: "dist/post/index.js"

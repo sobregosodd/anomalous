@@ -7,11 +7,14 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-dist/
+/dist/*.whl
+/dist/*.tar.gz
 build/
 
 # Node
 node_modules/
+coverage/
+lib/
 
 # Model artifacts / collected dumps
 *.joblib

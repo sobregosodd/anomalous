@@ -35,5 +35,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Syntax-check action scripts
+          cache: "npm"
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type-check
         run: npm run check
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Check dist/ is up to date
+        run: git diff --exit-code -- dist/
