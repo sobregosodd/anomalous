@@ -24,6 +24,10 @@ inputs:
     description: "Datadog Agent version to install for collection (empty = latest)."
     required: false
     default: ""
+  model-path:
+    description: "Path to a trained model to score the dump against at job end. If the file is absent, analysis is skipped (the dump is still uploaded)."
+    required: false
+    default: "anomalous-model.joblib"
 
 # TypeScript action: source lives under src/, built with @vercel/ncc into the
 # committed dist/ below. `npm run build` regenerates dist/ after editing src/.

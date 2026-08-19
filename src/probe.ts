@@ -13,6 +13,7 @@ import * as os from "os";
 import { spawn } from "child_process";
 import * as exec from "@actions/exec";
 import * as tc from "@actions/tool-cache";
+import { DefaultArtifactClient } from "@actions/artifact";
 
 const POLL_INTERVAL_MS = 5000;
 const POLL_MAX_ATTEMPTS = 20; // ~100s, matches the doc's `seq 1 20` / `sleep 5` loop.
@@ -257,4 +258,80 @@ export async function killDaemon(): Promise<void> {
     ignoreReturnCode: true,
     silent: true,
   });
+}
+
+/** Result of an `anomalous analyze` run: stdout (findings JSON) + exit code. */
+export interface AnalyzeResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
+
+/**
+ * Upload the collected dump as a workflow run artifact so the scheduled trainer
+ * (train.yml) and downstream consumers can read it back. Mirrors the
+ * `actions/upload-artifact@v4` behavior via the `@actions/artifact` lib (a JS
+ * post step cannot `uses:` another action, so we call the library directly).
+ *
+ * @param dumpPath  Absolute path to the dump file emitted by `stopDump`.
+ * @param dumpName  Logical artifact name (the action's `dump-name` input).
+ * @returns         The artifact upload response (id + size), or null if the
+ *                  dump file is missing.
+ */
+export async function uploadDump(
+  dumpPath: string,
+  dumpName: string,
+): Promise<{ id: number | undefined; size: number | undefined } | null> {
+  if (!dumpPath || !fs.existsSync(dumpPath)) {
+    return null;
+  }
+  const client = new DefaultArtifactClient();
+  const rootDirectory = path.dirname(dumpPath);
+  const response = await client.uploadArtifact(
+    dumpName,
+    [dumpPath],
+    rootDirectory,
+  );
+  return { id: response.id, size: response.size };
+}
+
+/**
+ * Install the `anomalous` Python package from the action checkout and run
+ * `anomalous analyze <dump> --model <model>` to score the dump against the
+ * trained model.
+ *
+ * Uses the system `python3` (preinstalled on GitHub-hosted ubuntu runners)
+ * rather than `actions/setup-python` (a JS post step cannot `uses:` an action).
+ * `ignoreReturnCode: true` so a findings exit-1 is returned, not thrown — the
+ * caller decides whether findings are a warning or a job failure.
+ *
+ * @param dumpPath   Path to the dump file to score.
+ * @param modelPath  Path to the trained model (joblib).
+ * @param actionDir  Repo/action root containing `pyproject.toml` (for `pip install .`).
+ * @returns          The exit code + captured stdout/stderr.
+ */
+export async function runAnalyze(
+  dumpPath: string,
+  modelPath: string,
+  actionDir: string,
+): Promise<AnalyzeResult> {
+  // Install the package (typer/numpy/scikit-learn deps resolved by pip).
+  await exec.getExecOutput(
+    "python3",
+    ["-m", "pip", "install", "--quiet", actionDir],
+    {
+      silent: true,
+    },
+  );
+
+  const result = await exec.getExecOutput(
+    "anomalous",
+    ["analyze", dumpPath, "--model", modelPath],
+    { ignoreReturnCode: true, silent: true },
+  );
+  return {
+    exitCode: result.exitCode,
+    stdout: result.stdout,
+    stderr: result.stderr,
+  };
 }

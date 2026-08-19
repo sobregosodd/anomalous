@@ -25,18 +25,30 @@ and its Cloud Workload Security (CWS) activity dumps.
 
 ## Quick start
 
-Add Anomalous as the first step of your job:
+Add Anomalous as the first step of your job. It starts a host-wide activity dump
+on entry, then — in its `post:` step, which runs even if a later step fails —
+stops the dump, uploads it as an artifact, and scores it against a trained model.
 
 ```yaml
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: sobregosodd/anomalous@v1
+        with:
+          model-path: anomalous-model.joblib   # trained by the scheduled trainer
       - run: ./build-and-test.sh   # your existing steps, unchanged
 ```
 
-That's it for collection.
+The model is built off the critical path by a scheduled trainer
+(`.github/workflows/train.yml`, daily) that accumulates collected dumps and
+uploads an `anomalous-model` artifact. Your workflow must make that model
+available to the action (e.g. by downloading the latest model artifact before
+the `uses:` step). If no model is present yet, analysis is skipped — the dump
+is still uploaded so the trainer can build the first model from accumulated
+runs. See [`.github/workflows/example.yml`](.github/workflows/example.yml) for a
+complete reference workflow that resolves and downloads the latest model.
 
 ## Documentation
 

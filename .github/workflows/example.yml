@@ -1,0 +1,72 @@
+# Example — full Anomalous loop: collect → upload dump → (later) train → analyze.
+#
+# This is a reference workflow showing how a consumer wires the collection action
+# together with the model produced by train.yml. It is not run by CI (see ci.yml
+# for that) — copy it into your own repo and adjust.
+#
+# The model is built off the critical path by the scheduled trainer
+# (.github/workflows/train.yml, daily 03:00 UTC), which uploads an
+# `anomalous-model` artifact. At collection time we download the latest model
+# artifact from the most recent successful train run, then run the collection
+# action with `model-path` pointing at it. The action's `post:` step then scores
+# the just-collected dump against that model and surfaces findings (advisory).
+#
+# If no model exists yet (first-ever runs), the action skips analysis and still
+# uploads the dump as an artifact — those accumulated dumps are what train.yml
+# consumes to build the first model.
+name: example
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read # needed to read other workflow runs' artifacts
+
+jobs:
+  collect-and-analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Download the latest trained model from the most recent successful
+      # train.yml run. `actions/download-artifact@v4` is run-scoped by default,
+      # so we pass `run-id` + `github-token` to pull across runs. We resolve the
+      # latest train run id with the GitHub CLI.
+      - name: Resolve latest train run
+        id: train-run
+        run: |
+          id=$(gh run list \
+            --workflow train.yml \
+            --status success \
+            --limit 1 \
+            --json databaseId -q '.[0].databaseId')
+          echo "run-id=$id" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download trained model
+        if: steps.train-run.outputs.run-id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: anomalous-model
+          path: .
+          run-id: ${{ steps.train-run.outputs.run-id }}
+          github-token: ${{ github.token }}
+
+      # The collection action: starts the host-wide dump on entry, stops +
+      # uploads it as an artifact + scores it against the model on `post:`.
+      - uses: ./
+        with:
+          dump-name: anomalous-dump
+          model-path: anomalous-model.joblib
+
+      # Your existing steps run between the action's main and post, observed by
+      # the dump. Replace this with your real build/test/deploy.
+      - name: User step (observed)
+        run: |
+          id; whoami
+          cat /etc/passwd
+          nslookup example.com || true
