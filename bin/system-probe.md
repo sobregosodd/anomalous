@@ -157,6 +157,14 @@ For structured (JSON) output, be aware CLI "generate encoding"-style commands ma
 sudo find / -name "<expected-file>.json" 2>/dev/null
 ```
 
+**The dump files are root-owned.** The daemon runs under `sudo`, so everything it writes into `profiles/` is owned by root with restrictive perms. Any non-root consumer of the dump — the artifact upload (`@actions/artifact`), a Python analyzer, `cat`, `strings` without `sudo` — will hit `EACCES: permission denied, open '...profile'`. Make the output readable before handing it to a non-root process:
+
+```bash
+sudo chmod -R a+rX ~/<feature>-test/profiles
+```
+
+(`a+rX` makes files readable and dirs searchable; `-R` covers the whole tree.) Do this *before* the upload/analyze step, not after — the `EACCES` happens at open time, so a post-hoc chmod won't rescue a run that already failed.
+
 ## 7. Prove a fix is real, not just "test still passes"
 
 Don't trust a passing test alone — temporarily revert the fix, rerun the exact same test/manual repro, confirm it now **fails**, then restore the fix. Since there's no build step here, this check has to happen at the unit-test level (or by swapping in a differently-built binary if one is available), not by re-running the manual repro against the same binary:

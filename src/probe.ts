@@ -273,6 +273,12 @@ export interface AnalyzeResult {
  * `actions/upload-artifact@v4` behavior via the `@actions/artifact` lib (a JS
  * post step cannot `uses:` another action, so we call the library directly).
  *
+ * The system-probe daemon runs as root (sudo), so the dump files it writes are
+ * root-owned and not readable by the `runner` user the Node post step runs as.
+ * We `sudo chmod -R a+rX` the profiles dir first — without this the upload
+ * fails with `EACCES: permission denied, open '...profile'` when the artifact
+ * client tries to zip the file.
+ *
  * @param dumpPath  Absolute path to the dump file emitted by `stopDump`.
  * @param dumpName  Logical artifact name (the action's `dump-name` input).
  * @returns         The artifact upload response (id + size), or null if the
@@ -285,8 +291,13 @@ export async function uploadDump(
   if (!dumpPath || !fs.existsSync(dumpPath)) {
     return null;
   }
-  const client = new DefaultArtifactClient();
   const rootDirectory = path.dirname(dumpPath);
+  // Make the root-owned dump files readable by the non-root runner user.
+  await exec.getExecOutput("sudo", ["chmod", "-R", "a+rX", rootDirectory], {
+    ignoreReturnCode: true,
+    silent: true,
+  });
+  const client = new DefaultArtifactClient();
   const response = await client.uploadArtifact(
     dumpName,
     [dumpPath],
@@ -315,6 +326,18 @@ export async function runAnalyze(
   modelPath: string,
   actionDir: string,
 ): Promise<AnalyzeResult> {
+  // The dump file is root-owned (the daemon runs as root); the Python process
+  // runs as the non-root runner user, so it can't read the dump either. Make it
+  // readable before invoking the analyzer.
+  await exec.getExecOutput(
+    "sudo",
+    ["chmod", "-R", "a+rX", path.dirname(dumpPath)],
+    {
+      ignoreReturnCode: true,
+      silent: true,
+    },
+  );
+
   // Install the package (typer/numpy/scikit-learn deps resolved by pip).
   await exec.getExecOutput(
     "python3",

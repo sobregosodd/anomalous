@@ -113,6 +113,7 @@ describe("uploadDump", () => {
   const { DefaultArtifactClient } = artifact as unknown as {
     DefaultArtifactClient: jest.Mock;
   };
+  const getExecOutput = actionsExec.getExecOutput as unknown as jest.Mock;
   let tmpDir: string;
   let dumpFile: string;
 
@@ -121,6 +122,8 @@ describe("uploadDump", () => {
     dumpFile = path.join(tmpDir, "profiles", "dump-1.json");
     fs.mkdirSync(path.dirname(dumpFile), { recursive: true });
     fs.writeFileSync(dumpFile, "{}");
+    getExecOutput.mockReset();
+    getExecOutput.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
   });
 
   afterEach(() => {
@@ -138,6 +141,12 @@ describe("uploadDump", () => {
 
     const result = await uploadDump(dumpFile, "anomalous-dump");
 
+    // chmod the root-owned profiles dir readable before the upload.
+    expect(getExecOutput).toHaveBeenCalledWith(
+      "sudo",
+      ["chmod", "-R", "a+rX", path.dirname(dumpFile)],
+      expect.objectContaining({ ignoreReturnCode: true, silent: true }),
+    );
     expect(uploadArtifact).toHaveBeenCalledTimes(1);
     expect(uploadArtifact).toHaveBeenCalledWith(
       "anomalous-dump",
@@ -170,17 +179,24 @@ describe("runAnalyze", () => {
       "/action",
     );
 
-    expect(getExecOutput).toHaveBeenCalledTimes(2);
-    // First call: pip install the package from the action dir.
+    expect(getExecOutput).toHaveBeenCalledTimes(3);
+    // First call: chmod the root-owned dump readable for the non-root runner.
     expect(getExecOutput).toHaveBeenNthCalledWith(
       1,
+      "sudo",
+      ["chmod", "-R", "a+rX", "/tmp"],
+      expect.objectContaining({ ignoreReturnCode: true, silent: true }),
+    );
+    // Second call: pip install the package from the action dir.
+    expect(getExecOutput).toHaveBeenNthCalledWith(
+      2,
       "python3",
       ["-m", "pip", "install", "--quiet", "/action"],
       expect.objectContaining({ silent: true }),
     );
-    // Second call: anomalous analyze <dump> --model <model>.
+    // Third call: anomalous analyze <dump> --model <model>.
     expect(getExecOutput).toHaveBeenNthCalledWith(
-      2,
+      3,
       "anomalous",
       ["analyze", "/tmp/dump.json", "--model", "/tmp/model.joblib"],
       expect.objectContaining({
