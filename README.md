@@ -50,6 +50,25 @@ is still uploaded so the trainer can build the first model from accumulated
 runs. See [`.github/workflows/example.yml`](.github/workflows/example.yml) for a
 complete reference workflow that resolves and downloads the latest model.
 
+## Required permissions
+
+The action uploads the collected dump as a workflow artifact from its `post:`
+step using the `@actions/artifact` library (a JS `post:` step cannot `uses:` the
+`actions/upload-artifact` action). For the uploaded artifact to **appear in the
+run Summary UI**, the workflow must grant `actions: write` to the `GITHUB_TOKEN`.
+Without it the upload still succeeds and the artifact is fully downloadable via
+the API, but GitHub hides it from the Summary page.
+
+```yaml
+permissions:
+  contents: read
+  actions: write   # required for the uploaded dump artifact to show in the UI
+```
+
+If your workflow declares `permissions:` explicitly, remember that **all
+unlisted scopes default to `none`** — so `actions: write` must be listed
+explicitly even if your repo's default workflow permissions are permissive.
+
 ## Documentation
 
 - [Architecture](ARCHITECTURE.md) — how the pieces fit together and the packaging trade-offs.

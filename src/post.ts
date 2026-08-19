@@ -56,6 +56,13 @@ async function run(): Promise<void> {
         core.notice(
           `Anomalous: dump uploaded as artifact "${dumpName}" (id=${uploaded.id}, size=${uploaded.size}, digest=${uploaded.digest}).`,
         );
+        // The artifact is real even when GitHub's UI hides it (a known issue
+        // without `actions: write`). Surface a copy-pasteable download command so
+        // the dump is always retrievable via the API.
+        const repo = process.env.GITHUB_REPOSITORY || "<owner>/<repo>";
+        core.notice(
+          `Anomalous: download it with: gh api repos/${repo}/actions/artifacts/${uploaded.id}/zip > ${dumpName}.zip`,
+        );
       } else {
         core.error("Anomalous: upload skipped — dump file not found.");
       }
