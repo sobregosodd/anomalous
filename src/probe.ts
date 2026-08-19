@@ -287,7 +287,11 @@ export interface AnalyzeResult {
 export async function uploadDump(
   dumpPath: string,
   dumpName: string,
-): Promise<{ id: number | undefined; size: number | undefined } | null> {
+): Promise<{
+  id: number | undefined;
+  size: number | undefined;
+  digest: string | undefined;
+} | null> {
   if (!dumpPath || !fs.existsSync(dumpPath)) {
     return null;
   }
@@ -303,7 +307,7 @@ export async function uploadDump(
     [dumpPath],
     rootDirectory,
   );
-  return { id: response.id, size: response.size };
+  return { id: response.id, size: response.size, digest: response.digest };
 }
 
 /**

@@ -54,7 +54,7 @@ async function run(): Promise<void> {
       const uploaded = await probe.uploadDump(dumpPath, dumpName);
       if (uploaded) {
         core.notice(
-          `Anomalous: dump uploaded as artifact "${dumpName}" (id=${uploaded.id}, size=${uploaded.size}).`,
+          `Anomalous: dump uploaded as artifact "${dumpName}" (id=${uploaded.id}, size=${uploaded.size}, digest=${uploaded.digest}).`,
         );
       } else {
         core.error("Anomalous: upload skipped — dump file not found.");

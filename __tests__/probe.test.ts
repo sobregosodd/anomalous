@@ -136,7 +136,9 @@ describe("uploadDump", () => {
   });
 
   it("uploads the dump under the given artifact name and root directory", async () => {
-    const uploadArtifact = jest.fn().mockResolvedValue({ id: 42, size: 1024 });
+    const uploadArtifact = jest
+      .fn()
+      .mockResolvedValue({ id: 42, size: 1024, digest: "abc123" });
     DefaultArtifactClient.mockImplementation(() => ({ uploadArtifact }));
 
     const result = await uploadDump(dumpFile, "anomalous-dump");
@@ -153,7 +155,7 @@ describe("uploadDump", () => {
       [dumpFile],
       path.dirname(dumpFile),
     );
-    expect(result).toEqual({ id: 42, size: 1024 });
+    expect(result).toEqual({ id: 42, size: 1024, digest: "abc123" });
   });
 });
 

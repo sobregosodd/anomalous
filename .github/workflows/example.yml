@@ -23,7 +23,7 @@ on:
 
 permissions:
   contents: read
-  actions: read # needed to read other workflow runs' artifacts
+  actions: write # write needed to upload artifacts (via @actions/artifact) AND to read cross-run artifacts
 
 jobs:
   collect-and-analyze:
