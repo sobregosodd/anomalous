@@ -20,3 +20,14 @@ lib/
 *.joblib
 dumps/
 anomalous-model*
+
+# system-probe runtime IPC artifacts — the daemon drops these into its cwd on
+# startup (auth_token, ipc_cert.pem). Must never be committed; the daemon is
+# now spawned with cwd=workDir() (see src/probe.ts startDaemon) so they land in
+# the scratch temp dir, but ignore them everywhere as a safety net.
+/auth_token
+/ipc_cert.pem
+/dist/main/auth_token
+/dist/main/ipc_cert.pem
+/dist/post/auth_token
+/dist/post/ipc_cert.pem

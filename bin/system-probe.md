@@ -23,6 +23,64 @@ runtime_security_config:
   # ... only the config keys strictly required to exercise the feature
 ```
 
+### Reference: a known-working full config
+
+When the feature under test is CWS activity-dump / security-profile (v2), the minimal
+config above is *not* enough on its own — several keys are load-bearing and easy to
+omit. Below is a config that is known to produce profile output end-to-end. Use it as a
+sanity baseline: start from this, then strip keys one at a time to prove each is
+actually required (or that the convenience switch pulls it up automatically).
+
+```yaml
+system_probe_config:
+  sysprobe_socket: /home/vagrant/host-capture-v2/sysprobe.sock
+
+runtime_security_config:
+  enabled: true                                              # REQUIRED — without this the runtime-security module never initializes, regardless of the keys below
+  socket: /home/vagrant/host-capture-v2/runtime-security.sock
+
+  activity_dump:
+    enabled: true
+    local_storage:
+      output_directory: /home/vagrant/host-capture-v2/profiles
+      formats: [profile]
+      max_dumps_count: 100
+      compression: false
+
+  security_profile:
+    enabled: true
+    dir: /home/vagrant/host-capture-v2/profiles            # MUST match activity_dump.local_storage.output_directory, or the profile reader won't find the dumps
+    v2:
+      enabled: true
+      host_dump:
+        enabled: true
+      event_types: [exec, dns, bind, connect, open]        # which event surfaces get captured into the profile
+      sample_refresh_period: 30s                            # how often the in-memory event state is flushed into a dump
+      max_dump_size: 5120                                   # per-dump size cap (KB); raise if dumps get truncated before capturing the activity you generated
+```
+
+Key things this config makes explicit that the minimal one hides:
+
+- **`runtime_security_config.enabled: true`** is the master switch. A live `system-probe`
+  process with `enabled` unset/`false` will log normally but the CWS consumer never starts,
+  so no activity-dump / security-profile output is ever produced. Always grep the daemon
+  log for module startup (§4) — a running binary is not proof the module initialized.
+- **`activity_dump` and `security_profile` are paired.** `activity_dump` is the producer
+  (it writes dump files to `local_storage.output_directory`); `security_profile` is the
+  consumer that turns those dumps into a profile. If `security_profile.dir` ≠
+  `activity_dump.local_storage.output_directory`, the consumer reads an empty directory
+  and you get a profile with no events — silently, with no error.
+- **`security_profile.v2.host_dump.enabled: true`** is what triggers a dump of host-wide
+  activity (as opposed to per-container). Omit it and you only get profiles for containers
+  that match the configured selectors — on a quiet VM that can look like "nothing works."
+- **`event_types`** controls which surfaces are captured. If you generate `exec` activity
+  but `exec` isn't in `event_types`, the profile will be empty for that activity — match
+  the list to what you plan to exercise in §5.
+- **`sample_refresh_period` / `max_dump_size`** are the two knobs most likely to make a
+  manual repro look like it "failed" when it actually just truncated or hadn't flushed yet.
+  If you stop the capture window (§5) shorter than `sample_refresh_period`, events may not
+  have been written out at all.
+
 **`datadog.yaml`** — required even when running `system-probe` standalone, because it still loads a core-agent config. Pin `hostname` since there's no core agent running to supply one.
 
 ```yaml
@@ -118,7 +176,7 @@ Leave the config directory itself in place for reuse in the next session.
 
 ## Common gotchas to check for in any config-driven feature
 
-- A single "convenience" config switch that's supposed to pull up prerequisite settings must d[118;1:3uo so on the **raw** config, before any downstream code reads the individual prerequisite keys — otherwise a later "if disabled, force everything off" branch silently undoes it.
+- A single "convenience" config switch that's supposed to pull up prerequisite settings must do so on the **raw** config, before any downstream code reads the individual prerequisite keys — otherwise a later "if disabled, force everything off" branch silently undoes it.
 - Module/feature enablement decisions are often made once at startup from raw config, not from the final parsed struct — a fix that only touches the parsed struct after that decision point won't take effect.
 - Any in-kernel or in-process dedup/state maps are typically global and persist across start/stop cycles — if the feature has a "start capture window" concept, check whether repeated activity across separate windows gets silently suppressed unless that state is explicitly flushed.
 - Without a build step, you're always testing whatever binary is already on disk — double-check its provenance (§3) before drawing conclusions from a run.

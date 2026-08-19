@@ -12,14 +12,17 @@ import * as probe from "./probe";
 
 async function run(): Promise<void> {
   if (core.getState("started") !== "true") {
-    core.notice("Anomalous: collection was never started; nothing to finalize.");
+    core.notice(
+      "Anomalous: collection was never started; nothing to finalize.",
+    );
     return;
   }
 
   const dumpName = core.getState("dump_name") || "anomalous-dump";
   const binaryPath = core.getState("binary_path");
   const configDir = core.getState("config_dir");
-  const uploadArtifact = (core.getInput("upload-artifact") || "true") === "true";
+  const uploadArtifact =
+    (core.getInput("upload-artifact") || "true") === "true";
 
   core.notice(`Anomalous: finalizing collection (dump="${dumpName}")`);
 
@@ -29,7 +32,9 @@ async function run(): Promise<void> {
   if (dumpPath) {
     core.notice(`Anomalous: activity dump stopped (path="${dumpPath}")`);
   } else {
-    core.error("Anomalous: activity dump stopped, but no dump file could be located.");
+    core.error(
+      "Anomalous: activity dump stopped, but no dump file could be located.",
+    );
   }
 
   // TODO(collection): if uploadArtifact, upload dumpPath as `dumpName` so the

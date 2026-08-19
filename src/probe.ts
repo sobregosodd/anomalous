@@ -46,7 +46,16 @@ export async function extractBinary(actionDir: string): Promise<string> {
   return binaryPath;
 }
 
-/** Write the minimal system-probe.yaml + datadog.yaml pair (doc §2). */
+/**
+ * Write the system-probe.yaml + datadog.yaml pair (doc §2).
+ *
+ * `system-probe.yaml` is the known-working full config from doc §2 ("Reference:
+ * a known-working full config"), not the stripped-minimal one. The minimal config
+ * omits the security_profile consumer block and the activity_dump.local_storage
+ * output directory — without both, activity_dump produces dump files that nothing
+ * reads, and you get an empty profile silently. See bin/system-probe.md for the
+ * rationale on each load-bearing key.
+ */
 export function writeConfigs(dumpName: string): string {
   const dir = workDir();
   const configDir = path.join(dir, "config");
@@ -54,6 +63,8 @@ export function writeConfigs(dumpName: string): string {
 
   const sysprobeSocket = path.join(dir, "sysprobe.sock");
   const runtimeSecuritySocket = path.join(dir, "runtime-security.sock");
+  const profilesDir = path.join(dir, "profiles");
+  fs.mkdirSync(profilesDir, { recursive: true });
   const hostname = `anomalous-${dumpName}`;
 
   fs.writeFileSync(
@@ -63,10 +74,27 @@ export function writeConfigs(dumpName: string): string {
       `  sysprobe_socket: ${sysprobeSocket}`,
       "",
       "runtime_security_config:",
-      `  socket: ${runtimeSecuritySocket}`,
       "  enabled: true",
+      `  socket: ${runtimeSecuritySocket}`,
+      "",
       "  activity_dump:",
       "    enabled: true",
+      "    local_storage:",
+      `      output_directory: ${profilesDir}`,
+      "      formats: [profile]",
+      "      max_dumps_count: 100",
+      "      compression: false",
+      "",
+      "  security_profile:",
+      "    enabled: true",
+      `    dir: ${profilesDir}   # must match activity_dump.local_storage.output_directory`,
+      "    v2:",
+      "      enabled: true",
+      "      host_dump:",
+      "        enabled: true",
+      "      event_types: [exec, dns, bind, connect, open]",
+      "      sample_refresh_period: 30s",
+      "      max_dump_size: 5120",
       "",
     ].join("\n"),
   );
@@ -92,7 +120,10 @@ export function writeConfigs(dumpName: string): string {
  * detached/background mode, and this process must keep running after main.ts
  * exits so the job's own steps can proceed.
  */
-export function startDaemon(binaryPath: string, configDir: string): DaemonHandle {
+export function startDaemon(
+  binaryPath: string,
+  configDir: string,
+): DaemonHandle {
   const dir = workDir();
   const logPath = path.join(dir, "daemon.log");
   const logFd = fs.openSync(logPath, "a");
@@ -100,7 +131,11 @@ export function startDaemon(binaryPath: string, configDir: string): DaemonHandle
   const child = spawn(
     "sudo",
     [binaryPath, "run", "-c", configDir, "--datadogcfgpath", configDir],
-    { detached: true, stdio: ["ignore", logFd, logFd] },
+    // cwd: write the daemon's runtime artifacts (auth_token, ipc_cert.pem) into
+    // the scratch work dir, not the action's own dist/ directory. Without this
+    // the binary inherits the Node process cwd (dist/main under GHA) and drops
+    // IPC credentials into the committed action tree.
+    { detached: true, cwd: dir, stdio: ["ignore", logFd, logFd] },
   );
   child.unref();
   fs.closeSync(logFd);
@@ -150,7 +185,10 @@ export async function waitForSocket(
 }
 
 /** Start a host-wide activity dump. Returns whatever identifier the CLI printed (if any). */
-export async function startDump(binaryPath: string, configDir: string): Promise<string> {
+export async function startDump(
+  binaryPath: string,
+  configDir: string,
+): Promise<string> {
   const { stdout } = await exec.getExecOutput("sudo", [
     binaryPath,
     "runtime",
@@ -165,7 +203,10 @@ export async function startDump(binaryPath: string, configDir: string): Promise<
 }
 
 /** Stop the activity dump and resolve the emitted dump file's path. */
-export async function stopDump(binaryPath: string, configDir: string): Promise<string> {
+export async function stopDump(
+  binaryPath: string,
+  configDir: string,
+): Promise<string> {
   const { stdout } = await exec.getExecOutput("sudo", [
     binaryPath,
     "runtime",

@@ -1,7 +1,11 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { extractBinary, extractPathFromOutput, findNewestDumpFile } from "../src/probe";
+import {
+  extractBinary,
+  extractPathFromOutput,
+  findNewestDumpFile,
+} from "../src/probe";
 
 // extractBinary only unzips + chmods — no sudo, never touches the real binary's
 // behavior — so it's safe to exercise directly against the real bin/system-probe.zip.
@@ -11,7 +15,9 @@ describe("extractBinary", () => {
   let previousRunnerTemp: string | undefined;
 
   beforeEach(() => {
-    runnerTemp = fs.mkdtempSync(path.join(os.tmpdir(), "anomalous-runner-temp-"));
+    runnerTemp = fs.mkdtempSync(
+      path.join(os.tmpdir(), "anomalous-runner-temp-"),
+    );
     previousRunnerTemp = process.env.RUNNER_TEMP;
     process.env.RUNNER_TEMP = runnerTemp;
   });
@@ -35,8 +41,11 @@ describe("extractBinary", () => {
 
 describe("extractPathFromOutput", () => {
   it("extracts a known dump extension from CLI output", () => {
-    const out = "activity dump stopped, wrote /tmp/anomalous-probe/profiles/dump-1.json\n";
-    expect(extractPathFromOutput(out)).toBe("/tmp/anomalous-probe/profiles/dump-1.json");
+    const out =
+      "activity dump stopped, wrote /tmp/anomalous-probe/profiles/dump-1.json\n";
+    expect(extractPathFromOutput(out)).toBe(
+      "/tmp/anomalous-probe/profiles/dump-1.json",
+    );
   });
 
   it("returns null when no path is present", () => {
