@@ -127,15 +127,21 @@ grep -aiE "cws consumer initialized|runtime security started|module event_monito
 Run CLI commands **inline**, never through a shell variable — zsh does not word-split `VAR="sudo ..."; $VAR subcommand`, so the command silently no-ops instead of erroring:
 
 ```bash
-sudo <path-to>/system-probe runtime <cmd> -c ~/<feature>-test --datadogcfgpath ~/<feature>-test <start-subcommand>
+# start the host-wide capture window
+sudo <path-to>/system-probe runtime activity-dump -c ~/<feature>-test --datadogcfgpath ~/<feature>-test host start
 
 # generate representative activity covering the surfaces the feature should capture
 # (process, file, DNS, network, whatever applies)
 id; whoami; cat /etc/passwd; nslookup example.com; wget -q example.com -O /tmp/x.html
 sleep 4   # allow events to settle before stopping
 
-sudo <path-to>/system-probe runtime <cmd> -c ~/<feature>-test --datadogcfgpath ~/<feature>-test <stop-subcommand>
+# stop the host-wide capture window (persists profiles to output_directory)
+sudo <path-to>/system-probe runtime activity-dump -c ~/<feature>-test --datadogcfgpath ~/<feature>-test host stop
 ```
+
+Note the `host` subcommand between the config flags and `start`/`stop` — it scopes
+the capture window to host-wide activity (matching `security_profile.v2.host_dump`).
+Omitting it makes the CLI no-op or error on an unrecognized `start`/`stop` token.
 
 ## 6. Inspect output
 

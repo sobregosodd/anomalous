@@ -197,6 +197,7 @@ export async function startDump(
     configDir,
     "--datadogcfgpath",
     configDir,
+    "host",
     "start",
   ]);
   return stdout.trim();
@@ -215,6 +216,7 @@ export async function stopDump(
     configDir,
     "--datadogcfgpath",
     configDir,
+    "host",
     "stop",
   ]);
 
