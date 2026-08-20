@@ -6,6 +6,7 @@ authors = ["Sebastian Obregoso", "Lorenzo Susini"]
 license = "Apache-2.0"
 readme = "README.md"
 packages = [{ include = "anomalous", from = "src" }]
+include = [{ path = "src/anomalous/py.typed", format = ["sdist", "wheel"] }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
