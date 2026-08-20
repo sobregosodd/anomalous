@@ -1,18 +1,19 @@
 # Example — full Anomalous loop: collect → upload dump → (later) train → analyze.
 #
-# This is a reference workflow showing how a consumer wires the collection action
-# together with the model produced by train.yml. It is not run by CI (see ci.yml
-# for that) — copy it into your own repo and adjust.
+# This is a REFERENCE workflow. It lives under examples/ so GitHub Actions never
+# runs it in this scaffold repo. Copy it into your OWN repo as
+# `.github/workflows/anomalous-example.yml` (or whatever name you like) and
+# adjust the triggers/steps to match your pipelines.
 #
-# The model is built off the critical path by the scheduled trainer
-# (.github/workflows/train.yml, daily 03:00 UTC), which uploads an
-# `anomalous-model` artifact. At collection time we download the latest model
-# artifact from the most recent successful train run, then run the collection
-# action with `model-path` pointing at it. The action's `post:` step then scores
-# the just-collected dump against that model and surfaces findings (advisory).
+# The model is built off the critical path by a scheduled trainer (see
+# examples/train.yml), which uploads an `anomalous-model` artifact. At collection
+# time we download the latest model artifact from the most recent successful
+# train run, then run the collection action with `model-path` pointing at it.
+# The action's `post:` step then scores the just-collected dump against that
+# model and surfaces findings (advisory).
 #
 # If no model exists yet (first-ever runs), the action skips analysis and still
-# uploads the dump as an artifact — those accumulated dumps are what train.yml
+# uploads the dump as an artifact — those accumulated dumps are what the trainer
 # consumes to build the first model.
 name: example
 

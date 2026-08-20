@@ -1,4 +1,10 @@
 # Scheduled trainer — builds/updates the behavioural model off the critical path.
+#
+# This is a REFERENCE workflow. It lives under examples/ so GitHub Actions never
+# runs it in this scaffold repo. Copy it into your OWN repo as
+# `.github/workflows/anomalous-train.yml` and adjust the schedule and dump
+# source to match your setup. Your repo accumulates the collected dumps (from
+# the collection action's artifact uploads) that this trainer consumes.
 name: train
 
 on:

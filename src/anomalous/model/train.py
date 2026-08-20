@@ -1,6 +1,6 @@
 """Offline trainer: aggregate historical dumps into a model.
 
-Invoked on a schedule (see ``.github/workflows/train.yml``). Reads the activity
+Invoked on a schedule (see ``examples/train.yml``). Reads the activity
 dumps accumulated across recent runs, fits a model, and persists it.
 """
 

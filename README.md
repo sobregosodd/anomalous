@@ -42,12 +42,12 @@ jobs:
 ```
 
 The model is built off the critical path by a scheduled trainer
-(`.github/workflows/train.yml`, daily) that accumulates collected dumps and
+([`examples/train.yml`](examples/train.yml), daily) that accumulates collected dumps and
 uploads an `anomalous-model` artifact. Your workflow must make that model
 available to the action (e.g. by downloading the latest model artifact before
 the `uses:` step). If no model is present yet, analysis is skipped — the dump
 is still uploaded so the trainer can build the first model from accumulated
-runs. See [`.github/workflows/example.yml`](.github/workflows/example.yml) for a
+runs. See [`examples/example.yml`](examples/example.yml) for a
 complete reference workflow that resolves and downloads the latest model.
 
 ## Required permissions
